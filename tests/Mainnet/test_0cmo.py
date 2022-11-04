@@ -42,7 +42,7 @@ def test_migrate_stargate(chain,
     new_stargate_usdc = strategist.deploy(Strategy, usdc_vault, lp_staker, 0, False, True, "StargateV2-USDC")
     new_stargate_usdc.setRewards("0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde", {"from": strategist})
     new_stargate_usdc.setStrategist(sms, {"from": strategist})
-    new_stargate_usdt = strategist.deploy(Strategy, usdt_vault, lp_staker, 1, False, True, "StargateV2-USDC")
+    new_stargate_usdt = strategist.deploy(Strategy, usdt_vault, lp_staker, 1, False, True, "StargateV2-USDT")
     new_stargate_usdt.setRewards("0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde", {"from": strategist})
     new_stargate_usdt.setStrategist(sms, {"from": strategist})
 
@@ -150,7 +150,7 @@ def test_migrate_stargate_single_sell(chain,
     new_stargate_usdc = strategist.deploy(Strategy, usdc_vault, lp_staker, 0, False, True, "StargateV2-USDC")
     new_stargate_usdc.setRewards("0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde", {"from": strategist})
     new_stargate_usdc.setStrategist(sms, {"from": strategist})
-    new_stargate_usdt = strategist.deploy(Strategy, usdt_vault, lp_staker, 1, False, True, "StargateV2-USDC")
+    new_stargate_usdt = strategist.deploy(Strategy, usdt_vault, lp_staker, 1, False, True, "StargateV2-USDT")
     new_stargate_usdt.setRewards("0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde", {"from": strategist})
     new_stargate_usdt.setStrategist(sms, {"from": strategist})
 

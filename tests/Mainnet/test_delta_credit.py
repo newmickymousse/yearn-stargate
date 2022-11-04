@@ -31,3 +31,4 @@ def test_limited_delta_credit_profit(
     vault.updateStrategyDebtRatio(strategy.address, 0, {"from": gov})
     chain.sleep(1)
     tx = strategy.harvest({"from": gov})
+    assert vault.debtOutstanding(strategy) > 0
