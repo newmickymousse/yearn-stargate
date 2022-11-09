@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0
 
-pragma solidity 0.6.12;
+pragma solidity 0.8.15;
 pragma experimental ABIEncoderV2;
 
 // These are the core Yearn libraries
 import {BaseStrategy, StrategyParams} from "@yearnvaults/contracts/BaseStrategy.sol";
-import "@openzeppelin/contracts/math/Math.sol";
-import {IERC20, Address} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IWETH.sol";
@@ -21,6 +22,7 @@ interface IBaseFee {
 }
 
 contract Strategy is BaseStrategy {
+    using SafeERC20 for IERC20;
     using Address for address;
 
     uint256 private constant max = type(uint256).max;
@@ -28,7 +30,6 @@ contract Strategy is BaseStrategy {
 
     address public tradeFactory;
 
-    address public baseFeeOracle;
 
     uint256 public liquidityPoolID;
     uint256 public liquidityPoolIDInLPStaking; // Each pool has a main Pool ID and then a separate Pool ID that refers to the pool in the LPStaking contract.
@@ -43,8 +44,6 @@ contract Strategy is BaseStrategy {
     bool public wantIsWETH;
     bool public emissionTokenIsSTG;
 
-    uint256 public creditThreshold; // amount of credit in underlying tokens that will automatically trigger a harvest
-    bool internal forceHarvestTriggerOnce; // only set this to true when we want to trigger our keepers to harvest for us
     bool internal unstakeLPOnMigration; //if True it would unstake the LP on `prepareMigration`, if not it would skip this step
 
     constructor(
@@ -178,7 +177,7 @@ contract Strategy is BaseStrategy {
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
-        return balanceOfWant().add(valueOfLPTokens());
+        return balanceOfWant() + valueOfLPTokens();
     }
 
     function pendingRewards() public view returns (uint256) {
@@ -204,16 +203,16 @@ contract Strategy is BaseStrategy {
         uint256 _vaultDebt = vault.strategies(address(this)).totalDebt;
         uint256 _totalAssets = estimatedTotalAssets();
 
-        _profit = _totalAssets > _vaultDebt ? _totalAssets.sub(_vaultDebt) : 0;
+        _profit = _totalAssets > _vaultDebt ? _totalAssets - _vaultDebt : 0;
 
         //free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
         uint256 _amountFreed;
-        uint256 _toLiquidate = _debtOutstanding.add(_profit);
+        uint256 _toLiquidate = _debtOutstanding + _profit;
         uint256 _wantBalance = balanceOfWant();
 
         if (_toLiquidate > _wantBalance) {
             (_amountFreed, _loss) = withdrawSome(
-                _toLiquidate.sub(_wantBalance)
+                _toLiquidate - _wantBalance
             );
             _totalAssets = estimatedTotalAssets();
         } else {
@@ -233,15 +232,15 @@ contract Strategy is BaseStrategy {
             _debtPayment = Math.min(_liquidWant - _profit, _debtOutstanding);
         }
         
-        _loss = _loss.add(
-            _vaultDebt > _totalAssets ? _vaultDebt.sub(_totalAssets) : 0
+        _loss = _loss + (
+            _vaultDebt > _totalAssets ? _vaultDebt - _totalAssets : 0
         );
 
         if (_loss > _profit) {
-            _loss = _loss.sub(_profit);
+            _loss = _loss - _profit;
             _profit = 0;
         } else {
-            _profit = _profit.sub(_loss);
+            _profit = _profit - _loss;
             _loss = 0;
         }
         // we're done harvesting, so reset our trigger if we used it
@@ -252,7 +251,7 @@ contract Strategy is BaseStrategy {
         uint256 _looseWant = balanceOfWant();
 
         if (_looseWant > _debtOutstanding) {
-            uint256 _amountToDeposit = _looseWant.sub(_debtOutstanding);
+            uint256 _amountToDeposit = _looseWant - _debtOutstanding;
             _addToLP(_amountToDeposit);
         }
         // we will need to do this no matter the want situation. If there is any unstaked LP Token, let's stake it.
@@ -272,7 +271,7 @@ contract Strategy is BaseStrategy {
             uint256 unstakedBalance = balanceOfUnstakedLPToken();
             uint256 lpAmountNeeded = _ldToLp(_amountNeeded);
             if(unstakedBalance < lpAmountNeeded && balanceOfStakedLPToken() > 0) {
-                _unstakeLP(lpAmountNeeded.sub(unstakedBalance));
+                _unstakeLP(lpAmountNeeded - unstakedBalance);
                 unstakedBalance = balanceOfUnstakedLPToken();
             }
             if (unstakedBalance > 0) {
@@ -281,12 +280,12 @@ contract Strategy is BaseStrategy {
             }
         }
 
-        uint256 _liquidAssets = balanceOfWant().sub(_preWithdrawWant);
+        uint256 _liquidAssets = balanceOfWant() - _preWithdrawWant;
         if (_amountNeeded > _liquidAssets) {
             _liquidatedAmount = _liquidAssets;
             uint256 balanceOfLPTokens = _lpToLd(balanceOfAllLPToken());
-            uint256 _potentialLoss = _amountNeeded.sub(_liquidAssets);
-            _loss = _potentialLoss > balanceOfLPTokens ? _potentialLoss.sub(balanceOfLPTokens):0;
+            uint256 _potentialLoss = _amountNeeded - _liquidAssets;
+            _loss = _potentialLoss > balanceOfLPTokens ? _potentialLoss - balanceOfLPTokens:0;
         } else {
             _liquidatedAmount = _amountNeeded;
         }
@@ -300,12 +299,12 @@ contract Strategy is BaseStrategy {
         uint256 _liquidAssets = balanceOfWant();
 
         if (_liquidAssets < _amountNeeded) {
-            (_liquidatedAmount, _loss) = withdrawSome(_amountNeeded.sub(_liquidAssets));
+            (_liquidatedAmount, _loss) = withdrawSome(_amountNeeded - _liquidAssets);
             _liquidAssets = balanceOfWant();
         }
 
         _liquidatedAmount = Math.min(_amountNeeded, _liquidAssets);
-        require(_amountNeeded >= _liquidatedAmount.add(_loss), "!check");
+        require(_amountNeeded >= _liquidatedAmount + _loss, "!check");
     }
 
     function liquidateAllPositions() internal override returns (uint256) {
@@ -341,7 +340,7 @@ contract Strategy is BaseStrategy {
 
         StrategyParams memory params = vault.strategies(address(this));
         // harvest no matter what once we reach our maxDelay
-        if (block.timestamp.sub(params.lastReport) > maxReportDelay) {
+        if (block.timestamp - params.lastReport > maxReportDelay) {
             return true;
         }
 
@@ -356,7 +355,7 @@ contract Strategy is BaseStrategy {
         }
 
         // harvest if we hit our minDelay, but only if our gas price is acceptable
-        if (block.timestamp.sub(params.lastReport) > minReportDelay) {
+        if (block.timestamp - params.lastReport > minReportDelay) {
             return true;
         }
 
@@ -391,8 +390,8 @@ contract Strategy is BaseStrategy {
 
     function _ldToLp(uint _amountLD) internal returns (uint) {
         require(liquidityPool.totalLiquidity() > 0);//dev: "Stargate: cant convert SDtoLP when totalLiq == 0";
-        uint256 _amountSD = _amountLD.div(liquidityPool.convertRate());
-        return _amountSD.mul(liquidityPool.totalSupply()).div(liquidityPool.totalLiquidity());
+        uint256 _amountSD = _amountLD / liquidityPool.convertRate();
+        return _amountSD * liquidityPool.totalSupply() / liquidityPool.totalLiquidity();
     }
 
     function _addToLP(uint256 _amount) internal {
@@ -489,7 +488,7 @@ contract Strategy is BaseStrategy {
     }
 
     function balanceOfAllLPToken() public view returns (uint256) {
-        return balanceOfUnstakedLPToken().add(balanceOfStakedLPToken());
+        return balanceOfUnstakedLPToken() + balanceOfStakedLPToken();
     }
 
     function balanceOfUnstakedLPToken() public view returns (uint256) {
@@ -528,31 +527,9 @@ contract Strategy is BaseStrategy {
         _claimRewards();
     }
 
-    // check if the current baseFee is below our external target
-    function isBaseFeeAcceptable() internal view returns (bool) {
-        return IBaseFee(baseFeeOracle).isCurrentBaseFeeAcceptable();
-    }
-
     // This allows us to unstake or not before migration
     function setUnstakeLPOnMigration(bool _unstakeLPOnMigration) external onlyVaultManagers {
         unstakeLPOnMigration = _unstakeLPOnMigration;
-    }
-
-    // This allows us to manually harvest with our keeper as needed
-    function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce) external onlyVaultManagers {
-        forceHarvestTriggerOnce = _forceHarvestTriggerOnce;
-    }
-
-    ///@notice Credit threshold is in want token, and will trigger a harvest if strategy credit is above this amount.
-    function setCreditThreshold(uint256 _creditThreshold) external onlyVaultManagers
-    {
-        creditThreshold = _creditThreshold;
-    }
-
-    ///@notice Change the contract to call to determine if basefee is acceptable for automated harvesting.
-    function setBaseFeeOracle(address _baseFeeOracle) external onlyVaultManagers
-    {
-        baseFeeOracle = _baseFeeOracle;
     }
 
     // ----------------- YSWAPS FUNCTIONS ---------------------

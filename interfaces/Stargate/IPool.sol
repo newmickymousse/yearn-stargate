@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity 0.6.12;
+pragma solidity 0.8.15;
 
 interface IPool {
     function poolId() external view returns (uint256); // shared id between chains to represent same pool
