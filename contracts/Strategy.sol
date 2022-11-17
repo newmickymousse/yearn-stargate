@@ -17,10 +17,6 @@ import "../interfaces/Stargate/IPool.sol";
 import "../interfaces/Stargate/ILPStaking.sol";
 import "./ySwaps/ITradeFactory.sol";
 
-interface IBaseFee {
-    function isCurrentBaseFeeAcceptable() external view returns (bool);
-}
-
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
@@ -414,7 +410,7 @@ contract Strategy is BaseStrategy {
     // conversion function needs to be payable to send ETH and thus needs to be public
     function _convertWETHtoSGETH(uint256 _amount) internal {
         IWETH(address(want)).withdraw(_amount);
-        address SGETH = IERC20Metadata(address(lpToken)).token();
+        address SGETH = IPool(address(lpToken)).token();
         ISGETH(SGETH).deposit{value: _amount}();
         _checkAllowance(address(stargateRouter), SGETH, _amount);
     }
