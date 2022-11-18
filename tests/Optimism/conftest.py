@@ -31,6 +31,11 @@ whale_addresses = {
     "WETH": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
 }
 
+lp_whale_addresses = {
+    "USDC": "0x392AC17A9028515a3bFA6CCe51F8b70306C6bd43",
+    "WETH": "0x1D7C6783328C145393e84fb47a7f7C548f5Ee28d",
+}
+
 # TODO: uncomment those tokens you want to test as want
 @pytest.fixture(
     params=[
@@ -208,8 +213,9 @@ def SGT_whale(accounts):
 
 
 @pytest.fixture
-def token_LP_whale(accounts):
-    yield accounts.at("0xf8fd11594574f6aeb3193e779b7b1cf5ef6432f4", force=True)
+def token_LP_whale(accounts, token):
+    #yield accounts.at("0xf8fd11594574f6aeb3193e779b7b1cf5ef6432f4", force=True)
+    yield accounts.at(lp_whale_addresses[token.symbol()], force=True)
 
 
 @pytest.fixture
@@ -244,6 +250,10 @@ def vault(pm, gov, rewards, guardian, management, token):
     yield vault
 
 @pytest.fixture
+def healthCheck():
+    yield "0x3d8F58774611676fd196D26149C71a9142C45296"
+
+@pytest.fixture
 def strategy(
     strategist,
     token,
@@ -260,6 +270,7 @@ def strategy(
     emissionTokenIsSTG,
     BaseFeeDummy,
     oChad,
+    healthCheck
 ):
     strategy = strategist.deploy(
         Strategy,
@@ -272,6 +283,7 @@ def strategy(
         f"StrategyStargate{token.symbol()}",
     )
     strategy.setKeeper(keeper, {"from": gov})
+    strategy.setHealthCheck(healthCheck, {"from": gov})
     strategy.setDoHealthCheck(False, {"from": gov})
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     strategy.setTradeFactory(trade_factory.address, {"from": gov})

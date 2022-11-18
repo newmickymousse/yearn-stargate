@@ -126,6 +126,7 @@ def test_losses(
     )
 
     chain.sleep(1)
+    strategy.setDoHealthCheck(False, {"from": gov})
     tx = strategy.harvest({"from": gov})
 
     assert (
