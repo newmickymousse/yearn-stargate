@@ -27,7 +27,6 @@ def test_double_init_should_revert(
         wantIsWeth,
         emissionTokenIsSTG,
         #price_feed,
-        "ClonedStrategy",
         {"from": strategist},
     )
 
@@ -92,7 +91,6 @@ def test_clone(
         wantIsWeth,
         emissionTokenIsSTG,
         #price_feed,
-        "ClonedStrategy",
         {"from": strategist},
     )
 
