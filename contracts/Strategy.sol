@@ -278,7 +278,11 @@ contract Strategy is BaseStrategy {
         return super.harvestTrigger(callCostInWei) || block.timestamp - params.lastReport > minReportDelay;
     }
 
-    function protectedTokens() internal view override returns (address[] memory) {}
+    function protectedTokens() internal view override returns (address[] memory) {
+        address[] memory protectedTokens = new address[](1);
+        protectedTokens[0] = address(lpToken);
+        return protectedTokens;
+    }
 
     function ethToWant(uint256 _ethAmount) public view override returns (uint256) {}
 
@@ -289,8 +293,7 @@ contract Strategy is BaseStrategy {
 
     function _ldToLp(uint256 _amountLD) internal returns (uint256) {
         require(liquidityPool.totalLiquidity() > 0); // @note Stargate: cant convert SDtoLP when totalLiq == 0
-        uint256 _amountSD = _amountLD / liquidityPool.convertRate();
-        return _amountSD * liquidityPool.totalSupply() / liquidityPool.totalLiquidity();
+        return (_amountLD * liquidityPool.totalSupply()) / (liquidityPool.convertRate() * liquidityPool.totalLiquidity());
     }
 
     function _addToLP(uint256 _amount) internal {
@@ -354,6 +357,7 @@ contract Strategy is BaseStrategy {
     }
 
     function _emergencyUnstakeLP() internal {
+        try lpStaker.deposit(liquidityPoolIDInLPStaking, 0) {} catch {}
         lpStaker.emergencyWithdraw(liquidityPoolIDInLPStaking);
     }
 
