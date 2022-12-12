@@ -278,9 +278,7 @@ def strategy(
         lp_staker,
         liquidity_pool_id_in_lp_staking,
         wantIsWeth,
-        emissionTokenIsSTG,
-        #price_feed,
-        f"StrategyStargate{token.symbol()}",
+        emissionTokenIsSTG
     )
     strategy.setKeeper(keeper, {"from": gov})
     strategy.setHealthCheck(healthCheck, {"from": gov})

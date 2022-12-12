@@ -303,7 +303,7 @@ contract Strategy is BaseStrategy {
             IWETH(address(want)).withdraw(_amount);
             stargateRouterETH.addLiquidity(liquidityPoolID, _amount, address(this));
         } else {
-            // want is not WETH:
+            // @note want is not WETH:
             _checkAllowance(address(stargateRouter), address(want), _amount);
             stargateRouter.addLiquidity(liquidityPoolID, _amount, address(this));
         }
@@ -410,6 +410,30 @@ contract Strategy is BaseStrategy {
     // @note This allows us to unstake or not before migration
     function setUnstakeLPOnMigration(bool _unstakeLPOnMigration) external onlyVaultManagers {
         unstakeLPOnMigration = _unstakeLPOnMigration;
+    }
+
+    // @note Redeem LP position, non-atomic, S*token will be burned and corresponding native token will be sent when available
+    function redeemLocal(uint16 _dstChainId, uint256 _dstPoolId, uint256 _lpAmount) external onlyVaultManagers {
+        // uint16 _dstChainId,
+        // uint256 _srcPoolId,
+        // uint256 _dstPoolId,
+        // address payable _refundAddress,
+        // uint256 _amountLP,
+        // bytes calldata _to,
+        // lzTxObj memory _lzTxParams
+
+        // struct lzTxObj {
+        // uint256 dstGasForCall;
+        // uint256 dstNativeAmount;
+        // bytes dstNativeAddr;
+        // }
+
+        lzTxObj memory _lzTxParams;
+        _lzTxParams.dstGasForCall = 0;
+        _lzTxParams.dstNativeAmount = 0;       
+        _lzTxParams.dstNativeAddr = address(this);
+
+        stargateRouter.redeemLocal(_dstChainId, uint16(liquidityPoolID), _dstPoolId, address(this), _lpAmount, address(this), _lzTxParams);
     }
 
     // ----------------- YSWAPS FUNCTIONS ---------------------

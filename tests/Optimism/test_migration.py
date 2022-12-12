@@ -37,8 +37,6 @@ def test_migration(
         liquidity_pool_id_in_lp_staking,
         wantIsWeth,
         emissionTokenIsSTG,
-        #price_feed,
-        "StrategyStargateUSDC",
     )
     previous_debt = vault.strategies(strategy).dict()["totalDebt"]
     vault.migrateStrategy(strategy, new_strategy, {"from": gov})

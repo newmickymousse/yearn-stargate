@@ -26,8 +26,6 @@ def test_double_init_should_revert(
         liquidity_pool_id_in_lp_staking,
         wantIsWeth,
         emissionTokenIsSTG,
-        #price_feed,
-        "ClonedStrategy",
         {"from": strategist},
     )
 
@@ -45,8 +43,6 @@ def test_double_init_should_revert(
             liquidity_pool_id_in_lp_staking,
             wantIsWeth,
             emissionTokenIsSTG,
-            #price_feed,
-            "RevertedStrat",
             {"from": gov},
         )
 
@@ -60,8 +56,6 @@ def test_double_init_should_revert(
             liquidity_pool_id_in_lp_staking,
             wantIsWeth,
             emissionTokenIsSTG,
-            #price_feed,
-            "ClonedRevertedStrat",
             {"from": gov},
         )
 
@@ -92,8 +86,6 @@ def test_clone(
         liquidity_pool_id_in_lp_staking,
         wantIsWeth,
         emissionTokenIsSTG,
-        #price_feed,
-        "ClonedStrategy",
         {"from": strategist},
     )
 
