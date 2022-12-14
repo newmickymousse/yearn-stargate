@@ -18,6 +18,12 @@ contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
+    struct lzTxObj {
+        uint256 dstGasForCall;
+        uint256 dstNativeAmount;
+        bytes dstNativeAddr;
+    }
+
     uint256 private constant max = type(uint256).max;
     bool internal isOriginal = true;
 
@@ -278,11 +284,7 @@ contract Strategy is BaseStrategy {
         return super.harvestTrigger(callCostInWei) || block.timestamp - params.lastReport > minReportDelay;
     }
 
-    function protectedTokens() internal view override returns (address[] memory) {
-        address[] memory protectedTokens = new address[](1);
-        protectedTokens[0] = address(lpToken);
-        return protectedTokens;
-    }
+    function protectedTokens() internal view override returns (address[] memory) {}
 
     function ethToWant(uint256 _ethAmount) public view override returns (uint256) {}
 
@@ -293,7 +295,8 @@ contract Strategy is BaseStrategy {
 
     function _ldToLp(uint256 _amountLD) internal returns (uint256) {
         require(liquidityPool.totalLiquidity() > 0); // @note Stargate: cant convert SDtoLP when totalLiq == 0
-        return (_amountLD * liquidityPool.totalSupply()) / (liquidityPool.convertRate() * liquidityPool.totalLiquidity());
+        return
+            (_amountLD * liquidityPool.totalSupply()) / (liquidityPool.convertRate() * liquidityPool.totalLiquidity());
     }
 
     function _addToLP(uint256 _amount) internal {
@@ -412,28 +415,13 @@ contract Strategy is BaseStrategy {
         unstakeLPOnMigration = _unstakeLPOnMigration;
     }
 
-    // @note Redeem LP position, non-atomic, S*token will be burned and corresponding native token will be sent when available
+    // @note Redeem LP position, non-atomic, s*token will be burned and corresponding native token will be sent when available
     function redeemLocal(uint16 _dstChainId, uint256 _dstPoolId, uint256 _lpAmount) external onlyVaultManagers {
-        // uint16 _dstChainId,
-        // uint256 _srcPoolId,
-        // uint256 _dstPoolId,
-        // address payable _refundAddress,
-        // uint256 _amountLP,
-        // bytes calldata _to,
-        // lzTxObj memory _lzTxParams
-
-        // struct lzTxObj {
-        // uint256 dstGasForCall;
-        // uint256 dstNativeAmount;
-        // bytes dstNativeAddr;
-        // }
-
-        lzTxObj memory _lzTxParams;
-        _lzTxParams.dstGasForCall = 0;
-        _lzTxParams.dstNativeAmount = 0;       
-        _lzTxParams.dstNativeAddr = address(this);
-
-        stargateRouter.redeemLocal(_dstChainId, uint16(liquidityPoolID), _dstPoolId, address(this), _lpAmount, address(this), _lzTxParams);
+        bytes memory _address = abi.encodePacked(address(this));
+        IStargateRouter.lzTxObj memory _lzTxParams = IStargateRouter.lzTxObj(0, 0, _address);
+        stargateRouter.redeemLocal(
+            _dstChainId, uint16(liquidityPoolID), _dstPoolId, payable(address(this)), _lpAmount, _address, _lzTxParams
+        );
     }
 
     // ----------------- YSWAPS FUNCTIONS ---------------------
