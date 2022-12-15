@@ -294,9 +294,12 @@ contract Strategy is BaseStrategy {
     }
 
     function _ldToLp(uint256 _amountLD) internal returns (uint256) {
-        require(liquidityPool.totalLiquidity() > 0); // @note Stargate: cant convert SDtoLP when totalLiq == 0
+        uint256 _totalLiquidity = liquidityPool.totalLiquidity();
+        uint256 _convertRate = liquidityPool.convertRate();
+        require(_totalLiquidity > 0); // @note Stargate: cant convert SDtoLP when totalLiq == 0
+        require(_convertRate > 0);
         return
-            (_amountLD * liquidityPool.totalSupply()) / (liquidityPool.convertRate() * liquidityPool.totalLiquidity());
+            (_amountLD * liquidityPool.totalSupply()) / (_convertRate * _totalLiquidity);
     }
 
     function _addToLP(uint256 _amount) internal {
