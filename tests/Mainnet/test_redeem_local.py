@@ -29,7 +29,7 @@ def test_redeem_local(
     assert strategy.balanceOfStakedLPToken() == 0
 
     # calling redeemLocal for all unstaken LP tokens, pull for OP (111)
-    strategy.redeemLocal(111, 1, strategy.balanceOfUnstakedLPToken(), {"from": gov})
+    tx = strategy.redeemLocal(111, 1, strategy.balanceOfUnstakedLPToken(), {"from": gov})
     assert strategy.balanceOfUnstakedLPToken() == 0 # this will transfer all LP tokens out of the strategy
 
     # wait a full day

@@ -419,11 +419,17 @@ contract Strategy is BaseStrategy {
     }
 
     // @note Redeem LP position, non-atomic, s*token will be burned and corresponding native token will be sent when available
-    function redeemLocal(uint16 _dstChainId, uint256 _dstPoolId, uint256 _lpAmount) external onlyVaultManagers {
+    function redeemLocal(uint16 _dstChainId, uint256 _dstPoolId, uint256 _lpAmount) payable external onlyVaultManagers {
         bytes memory _address = abi.encodePacked(address(this));
         IStargateRouter.lzTxObj memory _lzTxParams = IStargateRouter.lzTxObj(0, 0, _address);
         stargateRouter.redeemLocal(
-            _dstChainId, uint16(liquidityPoolID), _dstPoolId, payable(address(this)), _lpAmount, _address, _lzTxParams
+            _dstChainId, 
+            int16(liquidityPoolID),
+            _dstPoolId,
+            payable(address(this)),
+            _lpAmount,
+            _address,
+            _lzTxParams
         );
     }
 
