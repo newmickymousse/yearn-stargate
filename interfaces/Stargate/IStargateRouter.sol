@@ -35,6 +35,6 @@ interface IStargateRouter {
         bytes calldata _toAddress,
         bytes calldata _transferAndCallPayload,
         lzTxObj memory _lzTxParams
-    ) external view override returns (uint256, uint256);
+    ) external returns (uint256);
 
 }
