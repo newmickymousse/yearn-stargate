@@ -315,9 +315,7 @@ contract Strategy is BaseStrategy {
         }
     }
 
-    // @note Strategy needs to have a payable fallback to receive the ETH from WETH
     receive() external payable {
-        require(wantIsWETH);
     }
 
     function _wrapETHtoWETH() internal {
@@ -419,19 +417,10 @@ contract Strategy is BaseStrategy {
     }
 
     // @note Redeem LP position, non-atomic, s*token will be burned and corresponding native token will be sent when available
+    // @note Caller pays on source for the cross chain message, use quoteLayerZeroFee offchain to determine the fee
     function redeemLocal(uint16 _dstChainId, uint256 _dstPoolId, uint256 _lpAmount) payable external onlyVaultManagers {
         bytes memory _address = abi.encodePacked(address(this));
         IStargateRouter.lzTxObj memory _lzTxParams = IStargateRouter.lzTxObj(0, 0, "0x");
-        
-        // @note Caller pays on source for the cross chain message, using quoteLayerZeroFee to determine the fee
-        (uint256 _fee,) = stargateRouter.quoteLayerZeroFee(
-            _dstChainId, 
-            1,
-            _address,
-            "",
-            _lzTxParams
-        );
-
         stargateRouter.redeemLocal{value:msg.value}(
             _dstChainId, 
             liquidityPoolID,

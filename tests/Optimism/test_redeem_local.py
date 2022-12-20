@@ -26,7 +26,7 @@ def test_redeem_local(
     strategy.unstakeLP(strategy.balanceOfStakedLPToken(), {"from": gov})
     assert strategy.balanceOfStakedLPToken() == 0
 
-    # calling redeemLocal for all unstaken LP tokens, pull for OP (111)
-    tx = strategy.redeemLocal(111, 1, strategy.balanceOfUnstakedLPToken(), {"from": gov, "amount":1e17})
+    # calling redeemLocal for all unstaken LP tokens, pull for ETH mainnet (101)
+    tx = strategy.redeemLocal(101, 1, strategy.balanceOfUnstakedLPToken(), {"from": gov, "amount":1e17})
     assert strategy.balanceOfUnstakedLPToken() == 0 # make sure we have transferred all LP tokens using redeemLocal
     
