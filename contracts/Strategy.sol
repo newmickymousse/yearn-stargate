@@ -424,15 +424,13 @@ contract Strategy is BaseStrategy {
         IStargateRouter.lzTxObj memory _lzTxParams = IStargateRouter.lzTxObj(0, 0, "0x");
         
         // @note Caller pays on source for the cross chain message, using quoteLayerZeroFee to determine the fee
-        uint256 _fee = stargateRouter.quoteLayerZeroFee(
+        (uint256 _fee,) = stargateRouter.quoteLayerZeroFee(
             _dstChainId, 
-            3, // @note TYPE_REDEEM_LOCAL_CALL_BACK = 3;
+            1,
             _address,
             "",
             _lzTxParams
         );
-
-        require(msg.value == _fee);
 
         stargateRouter.redeemLocal{value:msg.value}(
             _dstChainId, 
