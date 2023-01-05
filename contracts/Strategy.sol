@@ -180,18 +180,14 @@ contract Strategy is BaseStrategy {
 
         uint256 _liquidWant = balanceOfWant();
 
-        // @note Calculate final p&l and _debtPayment
-
-        // @note Enough to pay profit (partial or full) only
-        if (_liquidWant > _profit) {
-            unchecked {
-                _debtPayment = Math.min(_liquidWant - _profit, _debtOutstanding);
-            }
-
-            // @note Enough to pay for all profit and _debtOutstanding (partial or full)
-        } else {
+        // @note calculate final p&l and _debtPayment
+        // @note enough to pay profit (partial or full) only
+        if (_liquidWant <= _profit) {
             _profit = _liquidWant;
             _debtPayment = 0;
+            // @note enough to pay for all profit and _debtOutstanding (partial or full)
+        } else {
+            _debtPayment = Math.min(_liquidWant - _profit, _debtOutstanding);
         }
 
         unchecked {
