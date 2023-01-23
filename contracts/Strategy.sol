@@ -90,6 +90,7 @@ contract Strategy is BaseStrategy {
         liquidityPool = IPool(address(lpToken));
         liquidityPoolID = liquidityPool.poolId();
         stargateRouter = IStargateRouter(liquidityPool.router());
+        stargateRouterETH = IStargateRouterETH(liquidityPool.router());        
         lpToken.safeApprove(address(lpStaker), max);
         wantIsWETH = _wantIsWETH;
         if (wantIsWETH == false) {
@@ -286,7 +287,7 @@ contract Strategy is BaseStrategy {
 
     // --------- UTILITY & HELPER FUNCTIONS ------------
     function _lpToLd(uint256 _amountLP) internal returns (uint256) {
-        return _lpToLd(_amountLP);
+        return liquidityPool.amountLPtoLD(_amountLP);
     }
 
     function _ldToLp(uint256 _amountLD) internal returns (uint256) {
@@ -303,6 +304,9 @@ contract Strategy is BaseStrategy {
         // @note Check if want token is WETH to unwrap from WETH to ETH to wrap to SGETH:
         if (wantIsWETH) {
             IWETH(address(want)).withdraw(_amount);
+            address SGETH = IPool(address(lpToken)).token();
+            ISGETH(SGETH).deposit{value: _amount}();
+            _checkAllowance(address(stargateRouter), SGETH, _amount);
             stargateRouterETH.addLiquidity(liquidityPoolID, _amount, address(this));
         } else {
             // @note want is not WETH:

@@ -26,7 +26,19 @@ def test_redeem_local(
     strategy.unstakeLP(strategy.balanceOfStakedLPToken(), {"from": gov})
     assert strategy.balanceOfStakedLPToken() == 0
 
-    # calling redeemLocal for all unstaken LP tokens, pull for ETH mainnet (101)
-    tx = strategy.redeemLocal(101, 1, strategy.balanceOfUnstakedLPToken(), {"from": gov, "amount":1e17})
-    assert strategy.balanceOfUnstakedLPToken() == 0 # make sure we have transferred all LP tokens using redeemLocal
+    # calling redeemLocal for all unstaken LP tokens, pull from another chain
+
+    # USDC - pull from Optimism
+    if strategy.want() == "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48":
+        tx = strategy.redeemLocal(111, 1, strategy.balanceOfUnstakedLPToken(), {"from": gov, "amount":1e17})
     
+    # USDT - pull from Arbitrum
+    if strategy.want() == "0xdAC17F958D2ee523a2206206994597C13D831ec7":
+        tx = strategy.redeemLocal(110, 2, strategy.balanceOfUnstakedLPToken(), {"from": gov, "amount":1e17})
+    
+    # WETH - Pull from Optimism
+    if strategy.want() == "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2":
+        tx = strategy.redeemLocal(111, 13, strategy.balanceOfUnstakedLPToken(), {"from": gov, "amount":1e17})
+    
+    assert strategy.balanceOfUnstakedLPToken() == 0 # make sure we have transferred all LP tokens using redeemLocal
+        
