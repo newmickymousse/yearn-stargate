@@ -10,10 +10,10 @@ interface ILPStaking {
         uint256 rewardDebt;
     }
     struct PoolInfo {
-        IERC20 lpToken;
-        uint256 allocPoint;
-        uint256 lastRewardBlock;
-        uint256 accStargatePerShare;
+        IERC20 lpToken; // Address of LP token contract.
+        uint256 allocPoint; // How many allocation points assigned to this pool. STGs to distribute per block.
+        uint256 lastRewardBlock; // Last block number that STGs distribution occurs.
+        uint256 accStargatePerShare; // Accumulated STGs per share, times 1e12. See below.
     }
 
     function poolInfo(uint256 _index) external view returns (PoolInfo memory);

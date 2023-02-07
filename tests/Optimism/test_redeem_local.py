@@ -23,7 +23,9 @@ def test_redeem_local(
     assert liquidityPool.deltaCredit() < amount
 
     # unstake all lp
+    assert strategy.balanceOfStakedLPToken() > 0
     strategy.unstakeLP(strategy.balanceOfStakedLPToken(), {"from": gov})
+    assert strategy.balanceOfUnstakedLPToken() > 0    
     assert strategy.balanceOfStakedLPToken() == 0
 
     # calling redeemLocal for all unstaken LP tokens, pull from another chain
