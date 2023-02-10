@@ -40,8 +40,8 @@ contract Strategy is BaseStrategy {
     ILPStaking public lpStaker;
 
     string internal strategyName;
-    bool public wantIsWETH;
-    bool public emissionTokenIsSTG;
+    bool private wantIsWETH;
+    bool private emissionTokenIsSTG;
 
     bool internal unstakeLPOnMigration;
 
@@ -92,6 +92,7 @@ contract Strategy is BaseStrategy {
         stargateRouter = IStargateRouter(liquidityPool.router());
         stargateRouterETH = IStargateRouterETH(liquidityPool.router());        
         lpToken.safeApprove(address(lpStaker), max);
+        require(liquidityPool.convertRate()) > 0;
         wantIsWETH = _wantIsWETH;
         if (wantIsWETH == false) {
             require(address(want) == liquidityPool.token());
@@ -99,6 +100,14 @@ contract Strategy is BaseStrategy {
             require(liquidityPoolID == 13); // @note PoolID == 13 for ETH pool on mainnet, Optimism, Arbitrum
         }
         unstakeLPOnMigration = true;
+
+        if (wantIsWETH) {
+            address SGETH = IPool(address(lpToken)).token();
+            IERC20(SGETH).safeApprove(address(stargateRouter), max);
+        } else {
+            IERC20(want).safeApprove(address(stargateRouter), max);
+        }
+
     }
 
     event Cloned(address indexed clone);
@@ -168,6 +177,7 @@ contract Strategy is BaseStrategy {
 
         unchecked {
             _profit = _totalAssets > _vaultDebt ? _totalAssets - _vaultDebt : 0;
+            _loss = _loss + (_vaultDebt > _totalAssets ? _vaultDebt - _totalAssets : 0);
         }
 
         // @note Free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
@@ -176,7 +186,6 @@ contract Strategy is BaseStrategy {
 
         if (_toLiquidate > _wantBalance) {
             _loss = withdrawSome(_toLiquidate - _wantBalance);
-            _totalAssets = estimatedTotalAssets();
         }
 
         uint256 _liquidWant = balanceOfWant();
@@ -189,10 +198,6 @@ contract Strategy is BaseStrategy {
             // @note enough to pay for all profit and _debtOutstanding (partial or full)
         } else {
             _debtPayment = Math.min(_liquidWant - _profit, _debtOutstanding);
-        }
-
-        unchecked {
-            _loss = _loss + (_vaultDebt > _totalAssets ? _vaultDebt - _totalAssets : 0);
         }
 
         if (_loss > _profit) {
@@ -292,25 +297,20 @@ contract Strategy is BaseStrategy {
 
     function _ldToLp(uint256 _amountLD) internal returns (uint256) {
         uint256 _totalLiquidity = liquidityPool.totalLiquidity();
-        uint256 _convertRate = liquidityPool.convertRate();
         require(_totalLiquidity > 0); // @note Stargate: cant convert SDtoLP when totalLiq == 0
-        require(_convertRate > 0);
         return
-            (_amountLD * liquidityPool.totalSupply()) / (_convertRate * _totalLiquidity);
+            (_amountLD * liquidityPool.totalSupply()) / (_totalLiquidity);
     }
 
     function _addToLP(uint256 _amount) internal {
-        _amount = Math.min(balanceOfWant(), _amount); // @note We don't want to add to LP more than we have
         // @note Check if want token is WETH to unwrap from WETH to ETH to wrap to SGETH:
         if (wantIsWETH) {
             IWETH(address(want)).withdraw(_amount);
             address SGETH = IPool(address(lpToken)).token();
             ISGETH(SGETH).deposit{value: _amount}();
-            _checkAllowance(address(stargateRouter), SGETH, _amount);
             stargateRouterETH.addLiquidity(liquidityPoolID, _amount, address(this));
         } else {
             // @note want is not WETH:
-            _checkAllowance(address(stargateRouter), address(want), _amount);
             stargateRouter.addLiquidity(liquidityPoolID, _amount, address(this));
         }
     }
@@ -369,6 +369,10 @@ contract Strategy is BaseStrategy {
         _emergencyUnstakeLP();
     }
 
+    function sweepETH() public onlyGovernance {
+        (bool success, ) = governance().call{value: address(this).balance}(""); require(success, "!FailedETHSweep"); 
+        }
+
     function balanceOfWant() public view returns (uint256) {
         return want.balanceOf(address(this));
     }
@@ -392,13 +396,6 @@ contract Strategy is BaseStrategy {
 
     function balanceOfReward() external view returns (uint256) {
         return reward.balanceOf(address(this));
-    }
-
-    function _checkAllowance(address _contract, address _token, uint256 _amount) internal {
-        if (IERC20(_token).allowance(address(this), _contract) < _amount) {
-            IERC20(_token).safeApprove(_contract, 0);
-            IERC20(_token).safeApprove(_contract, _amount);
-        }
     }
 
     function _claimRewards() internal {
