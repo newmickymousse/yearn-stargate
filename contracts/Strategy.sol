@@ -83,7 +83,7 @@ contract Strategy is BaseStrategy {
         liquidityPool = IPool(address(lpToken));
         liquidityPoolID = liquidityPool.poolId();  
         lpToken.safeApprove(address(lpStaker), max);
-        require(liquidityPool.convertRate()) > 0;
+        require(liquidityPool.convertRate() > 0);
         wantIsWETH = _wantIsWETH;
         if (wantIsWETH == false) {
             require(address(want) == liquidityPool.token());
@@ -224,9 +224,9 @@ contract Strategy is BaseStrategy {
         uint256 unstakedBalance = balanceOfUnstakedLPToken();
         uint256 lpAmountNeeded = _ldToLp(_amountNeeded);
 
-        if (unstakedBalance < lpAmountNeeded) {
-            uint256 toUnstake = lpAmountNeeded - unstakedBalance;
-            unstakedBalance = _unstake(toUnstake) + unstakedBalance;
+        if (unstakedBalance < lpAmountNeeded && balanceOfStakedLPToken() > 0) {
+            _unstakeLP(lpAmountNeeded - unstakedBalance);
+            unstakedBalance = balanceOfUnstakedLPToken();
         }
 
         if (unstakedBalance > 0) {

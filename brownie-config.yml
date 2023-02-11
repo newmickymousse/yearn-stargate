@@ -1,24 +1,115 @@
-# use Ganache's forked mainnet mode as the default network
-# NOTE: You don't *have* to do this, but it is often helpful for testing
-networks:
-  default: mainnet-fork
+live:
+- name: Ethereum
+  networks:
+    - name: Mainnet (Infura)
+      chainid: 1
+      id: mainnet
+      host: https://mainnet.infura.io/v3/$WEB3_INFURA_PROJECT_ID
+      explorer: https://api.etherscan.io/api
+- name: Polygon
+  networks:
+    - name: Mainnet
+      chainid: 137
+      id: matic-main
+      host:  https://polygon-mainnet.g.alchemy.com/v2/$POLYGON_ALCHEMY_PROJECT_ID
+      explorer: https://api.polygonscan.com/api
+- name: Binance Smart Chain
+  networks:
+    - name: Mainnet
+      chainid: 56
+      id: bsc-main
+      host: https://bsc-dataseed.binance.org
+      explorer: https://api.bscscan.com/api
+- name: Fantom Opera
+  networks:
+    - name: Mainnet
+      chainid: 250
+      id: ftm-main
+      host: https://opera:zgNmpZno8CFXCVvHm7I2JZ6NETmEotAA@fantom.yearn.science
+      explorer: https://api.ftmscan.com/api
+- name: Arbitrum One
+  networks:
+  - chainid: 42161
+    host: https://arb1.arbitrum.io/rpc
+    id: arb-main
+    name: Mainnet
+    explorer: https://api.arbiscan.io/api
+- name: Optimism
+  networks:
+  - chainid: 10
+    host: https://yearn:yRNXllZUnzSgX8pTKnlg4Y7z@optimism1.node.yearn.tools
+    id: opti-main
+    name: Mainnet
+    explorer: https://api-optimistic.etherscan.io/api
 
-# automatically fetch contract sources from Etherscan
-autofetch_sources: True
-
-# require OpenZepplin Contracts
-dependencies:
-  - yearn/yearn-vaults@0.4.5
-  - OpenZeppelin/openzeppelin-contracts@4.8.0
-
-# path remapping to support imports from GitHub/NPM
-compiler:
-  solc:
-    version: 0.8.15
-    remappings:
-      - "@yearnvaults=yearn/yearn-vaults@0.4.5"
-      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@4.8.0"
-
-reports:
-  exclude_contracts:
-    - SafeMath
+development:
+- cmd: ganache-cli
+  cmd_settings:
+    accounts: 10
+    evm_version: istanbul
+    fork: mainnet
+    gas_limit: 30000000
+    mnemonic: brownie
+    port: 8545
+  host: http://127.0.0.1
+  id: eth-main-fork
+  name: Ganache-CLI (eth-Mainnet Fork)
+  timeout: 1200
+- cmd: ganache-cli
+  cmd_settings:
+    accounts: 10
+    evm_version: istanbul
+    fork: bsc-main
+    gas_limit: 12000000
+    mnemonic: brownie
+    port: 8545
+  host: http://127.0.0.1
+  id: bsc-main-fork
+  name: Ganache-CLI (BSC-Mainnet Fork)
+  timeout: 1200
+- cmd: ganache-cli
+  cmd_settings:
+    accounts: 10
+    evm_version: istanbul
+    fork: ftm-main
+    gas_limit: 12000000
+    mnemonic: brownie
+    port: 8545
+  host: http://127.0.0.1
+  id: ftm-main-fork
+  name: Ganache-CLI (FTM-Mainnet Fork)
+  timeout: 1200
+- cmd: ganache-cli
+  cmd_settings:
+    accounts: 10
+    evm_version: istanbul
+    fork: matic-main
+    gas_limit: 8500000
+    mnemonic: brownie
+    port: 8545
+  host: http://127.0.0.1
+  id: matic-main-fork
+  name: Ganache-CLI (MATIC-Mainnet Fork)
+  timeout: 1200
+- cmd: ganache-cli
+  cmd_settings:
+    accounts: 10
+    evm_version: istanbul
+    fork: arb-main
+    gas_limit: 12000000
+    mnemonic: brownie
+    port: 8545
+  host: http://127.0.0.1
+  id: arb-main-fork
+  name: Ganache-CLI (ARBITRUMONE-Mainnet Fork) 
+- cmd: ganache-cli
+  cmd_settings:
+    accounts: 10
+    evm_version: istanbul
+    fork: opti-main
+    gas_limit: 12000000
+    mnemonic: brownie
+    port: 8545
+  host: http://127.0.0.1
+  id: opti-main-fork
+  name: Ganache-CLI (Optimism-Mainnet Fork)
