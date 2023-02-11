@@ -18,12 +18,6 @@ contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
 
-    struct lzTxObj {
-        uint256 dstGasForCall;
-        uint256 dstNativeAmount;
-        bytes dstNativeAddr;
-    }
-
     uint256 private constant max = type(uint256).max;
     bool internal isOriginal = true;
 
@@ -42,7 +36,6 @@ contract Strategy is BaseStrategy {
     string internal strategyName;
     bool private wantIsWETH;
     bool private emissionTokenIsSTG;
-
     bool internal unstakeLPOnMigration;
 
     constructor(
@@ -88,16 +81,16 @@ contract Strategy is BaseStrategy {
         liquidityPoolIDInLPStaking = _liquidityPoolIDInLPStaking;
         lpToken = lpStaker.poolInfo(_liquidityPoolIDInLPStaking).lpToken;
         liquidityPool = IPool(address(lpToken));
-        liquidityPoolID = liquidityPool.poolId();
-        stargateRouter = IStargateRouter(liquidityPool.router());
-        stargateRouterETH = IStargateRouterETH(liquidityPool.router());        
+        liquidityPoolID = liquidityPool.poolId();  
         lpToken.safeApprove(address(lpStaker), max);
         require(liquidityPool.convertRate()) > 0;
         wantIsWETH = _wantIsWETH;
         if (wantIsWETH == false) {
             require(address(want) == liquidityPool.token());
+            stargateRouterETH = IStargateRouterETH(liquidityPool.router()); 
         } else {
             require(liquidityPoolID == 13); // @note PoolID == 13 for ETH pool on mainnet, Optimism, Arbitrum
+            stargateRouter = IStargateRouter(liquidityPool.router());
         }
         unstakeLPOnMigration = true;
 
@@ -231,16 +224,18 @@ contract Strategy is BaseStrategy {
         uint256 unstakedBalance = balanceOfUnstakedLPToken();
         uint256 lpAmountNeeded = _ldToLp(_amountNeeded);
 
-        if (unstakedBalance < lpAmountNeeded && balanceOfStakedLPToken() > 0) {
-            _unstakeLP(lpAmountNeeded - unstakedBalance);
-            unstakedBalance = balanceOfUnstakedLPToken();
+        if (unstakedBalance < lpAmountNeeded) {
+            uint256 toUnstake = lpAmountNeeded - unstakedBalance;
+            unstakedBalance = _unstake(toUnstake) + unstakedBalance;
         }
+
         if (unstakedBalance > 0) {
             _withdrawFromLP(lpAmountNeeded);
         }
 
-        uint256 _liquidatedAmount = balanceOfWant() - _preWithdrawWant;
-        if (_amountNeeded > _liquidatedAmount) {
+        uint256 _balanceOfWant = balanceOfWant();
+        uint256 _liquidatedAmount = _balanceOfWant - _preWithdrawWant;
+        if (_amountNeeded > _balanceOfWant) {
             uint256 balanceOfLPTokens = _lpToLd(balanceOfAllLPToken());
             uint256 _potentialLoss = _amountNeeded - _liquidatedAmount;
             unchecked {
@@ -414,7 +409,7 @@ contract Strategy is BaseStrategy {
     }
 
     // @note Redeem LP position, non-atomic, s*token will be burned and corresponding native token will be sent when available
-    // @note Caller pays on source for the cross chain message, use quoteLayerZeroFee offchain to determine the fee
+    // @note Can take up to 30 min - block confs of source chain + block confs of B chain
     function redeemLocal(uint16 _dstChainId, uint256 _dstPoolId, uint256 _lpAmount) payable external onlyGovernance {
         bytes memory _address = abi.encodePacked(address(this));
         IStargateRouter.lzTxObj memory _lzTxParams = IStargateRouter.lzTxObj(0, 0, "0x");
