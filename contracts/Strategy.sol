@@ -234,8 +234,8 @@ contract Strategy is BaseStrategy {
         }
 
         uint256 _balanceOfWant = balanceOfWant();
-        uint256 _liquidatedAmount = _balanceOfWant - _preWithdrawWant;
         if (_amountNeeded > _balanceOfWant) {
+            uint256 _liquidatedAmount = _balanceOfWant - _preWithdrawWant;
             uint256 balanceOfLPTokens = _lpToLd(balanceOfAllLPToken());
             uint256 _potentialLoss = _amountNeeded - _liquidatedAmount;
             unchecked {
