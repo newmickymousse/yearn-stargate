@@ -174,11 +174,11 @@ contract Strategy is BaseStrategy {
         }
 
         // @note Free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
-        uint256 _toLiquidate = _debtOutstanding + _profit;
+        uint256 _amountNeeded = _debtOutstanding + _profit;
         uint256 _wantBalance = balanceOfWant();
 
-        if (_toLiquidate > _wantBalance) {
-            _loss = withdrawSome(_toLiquidate - _wantBalance);
+        if (_amountNeeded > _wantBalance) {
+            _loss = withdrawSome(_amountNeeded);
         }
 
         uint256 _liquidWant = balanceOfWant();
@@ -220,24 +220,24 @@ contract Strategy is BaseStrategy {
     }
 
     function withdrawSome(uint256 _amountNeeded) internal returns (uint256 _loss) {
+        uint256 _toWithdraw = _amountNeeded - balanceOfWant();
         uint256 _preWithdrawWant = balanceOfWant();
         uint256 unstakedBalance = balanceOfUnstakedLPToken();
-        uint256 lpAmountNeeded = _ldToLp(_amountNeeded);
+        uint256 lpAmountToWithdraw = _ldToLp(_toWithdraw);
 
-        if (unstakedBalance < lpAmountNeeded && balanceOfStakedLPToken() > 0) {
-            _unstakeLP(lpAmountNeeded - unstakedBalance);
+        if (unstakedBalance < lpAmountToWithdraw && balanceOfStakedLPToken() > 0) {
+            _unstakeLP(lpAmountToWithdraw - unstakedBalance);
             unstakedBalance = balanceOfUnstakedLPToken();
         }
 
         if (unstakedBalance > 0) {
-            _withdrawFromLP(lpAmountNeeded);
+            _withdrawFromLP(lpAmountToWithdraw);
         }
 
-        uint256 _balanceOfWant = balanceOfWant();
-        if (_amountNeeded > _balanceOfWant) {
-            uint256 _liquidatedAmount = _balanceOfWant - _preWithdrawWant;
+        uint256 _liquidatedAmount = balanceOfWant() - _preWithdrawWant;
+        if (_toWithdraw > _liquidatedAmount) {
             uint256 balanceOfLPTokens = _lpToLd(balanceOfAllLPToken());
-            uint256 _potentialLoss = _amountNeeded - _liquidatedAmount;
+            uint256 _potentialLoss = _toWithdraw - _liquidatedAmount;
             unchecked {
                 _loss = _potentialLoss > balanceOfLPTokens ? _potentialLoss - balanceOfLPTokens : 0;
             }
@@ -252,7 +252,7 @@ contract Strategy is BaseStrategy {
         uint256 _liquidAssets = balanceOfWant();
 
         if (_liquidAssets < _amountNeeded) {
-            (_loss) = withdrawSome(_amountNeeded - _liquidAssets);
+            (_loss) = withdrawSome(_amountNeeded);
             _liquidAssets = balanceOfWant();
         }
 
