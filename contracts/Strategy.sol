@@ -170,7 +170,7 @@ contract Strategy is BaseStrategy {
 
         unchecked {
             _profit = _totalAssets > _vaultDebt ? _totalAssets - _vaultDebt : 0;
-            _loss = _loss + (_vaultDebt > _totalAssets ? _vaultDebt - _totalAssets : 0);
+            _loss = (_vaultDebt > _totalAssets ? _vaultDebt - _totalAssets : 0);
         }
 
         // @note Free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
@@ -178,7 +178,7 @@ contract Strategy is BaseStrategy {
         uint256 _wantBalance = balanceOfWant();
 
         if (_amountNeeded > _wantBalance) {
-            _loss = withdrawSome(_amountNeeded);
+            _loss = _loss + withdrawSome(_amountNeeded);
         }
 
         uint256 _liquidWant = balanceOfWant();
@@ -274,6 +274,11 @@ contract Strategy is BaseStrategy {
             _emergencyUnstakeLP();
         }
         lpToken.safeTransfer(_newStrategy, balanceOfUnstakedLPToken());
+        _claimRewards()
+        uint256 _balanceOfReward = balanceOfReward();
+        if (_balanceOfReward > 0) {
+            reward.safeTransfer(_newStrategy, _balanceOfReward);
+        }        
     }
 
     function harvestTrigger(uint256 callCostInWei) public view virtual override returns (bool) {
