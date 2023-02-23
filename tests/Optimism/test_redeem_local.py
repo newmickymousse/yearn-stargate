@@ -28,6 +28,9 @@ def test_redeem_local(
     assert strategy.balanceOfUnstakedLPToken() > 0    
     assert strategy.balanceOfStakedLPToken() == 0
 
+    # make sure gov has ETH for gas!
+    accounts.at("0xD6216fC19DB775Df9774a6E33526131dA7D19a2c").transfer(gov, "1 ether")
+
     # calling redeemLocal for all unstaken LP tokens, pull from another chain
     tx = strategy.redeemLocal(101, strategy.balanceOfUnstakedLPToken(), {"from": gov, "amount":1e17})
     
