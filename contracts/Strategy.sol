@@ -13,6 +13,18 @@ import "../interfaces/Stargate/IPool.sol";
 import "../interfaces/Stargate/ILPStaking.sol";
 import "./ySwaps/ITradeFactory.sol";
 
+interface IVelodromeRouter {
+    function swapExactTokensForTokensSimple(
+        uint amountIn,
+        uint amountOutMin,
+        address tokenFrom,
+        address tokenTo,
+        bool stable,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
+}
+
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
@@ -35,6 +47,8 @@ contract Strategy is BaseStrategy {
     bool private wantIsWETH;
     bool private emissionTokenIsSTG;
     bool internal unstakeLPOnMigration;
+
+    address internal constant velodromeRouter = 0xa132DAB612dB5cB9fC9Ac426A0Cc215A3423F9c9;
 
     constructor(
         address _vault,
@@ -72,8 +86,9 @@ contract Strategy is BaseStrategy {
         emissionTokenIsSTG = _emissionTokenIsSTG;
         if (emissionTokenIsSTG) {
             reward = IERC20(lpStaker.stargate());
-        } else {
+        } else { // @note on Optimism rewards are OP only
             reward = IERC20(lpStaker.eToken());
+            IERC20(reward).safeApprove(address(velodromeRouter), max);
         }
 
         liquidityPoolIDInLPStaking = _liquidityPoolIDInLPStaking;
@@ -156,6 +171,9 @@ contract Strategy is BaseStrategy {
         returns (uint256 _profit, uint256 _loss, uint256 _debtPayment)
     {
         _claimRewards();
+        if (emissionTokenIsSTG = false){
+            _sell(balanceOfReward());
+        }
 
         // @note Grab the estimate total debt from the vault
         uint256 _vaultDebt = vault.strategies(address(this)).totalDebt;
@@ -171,7 +189,7 @@ contract Strategy is BaseStrategy {
         uint256 _wantBalance = balanceOfWant();
 
         if (_amountNeeded > _wantBalance) {
-            uint256 _loss = _loss + withdrawSome(_amountNeeded);
+            _loss = _loss + withdrawSome(_amountNeeded);
         }
 
         uint256 _liquidWant = balanceOfWant();
@@ -437,4 +455,21 @@ contract Strategy is BaseStrategy {
         reward.safeApprove(tradeFactory, 0);
         tradeFactory = address(0);
     }
+
+    // ----------------- DEX LOGIC FOR OPTIMISM ---------------------
+
+    function _sell(uint256 _rewardTokenAmount) internal {      
+        if (_rewardTokenAmount > 1e17) {
+            IVelodromeRouter(velodromeRouter).swapExactTokensForTokensSimple(
+                _rewardTokenAmount, // amountIn
+                0, // amountOutMin
+                address(reward), // tokenFrom
+                address(want), // tokenTo
+                false, // stable
+                address(this), // to
+                block.timestamp // deadline
+            );
+        }
+    }
+
 }
