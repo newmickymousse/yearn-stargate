@@ -171,7 +171,7 @@ contract Strategy is BaseStrategy {
         returns (uint256 _profit, uint256 _loss, uint256 _debtPayment)
     {
         _claimRewards();
-        if (emissionTokenIsSTG = false){
+        if (emissionTokenIsSTG == false){
             _sell(balanceOfReward());
         }
 
