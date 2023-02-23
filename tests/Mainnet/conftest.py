@@ -29,7 +29,7 @@ token_isWeth = {
 }
 
 whale_addresses = {
-    "USDC": "0x0a59649758aa4d66e25f08dd01271e891fe52199",
+    "USDC": "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503",
     "USDT": "0x47ac0Fb4F2D84898e4D9E7b4DaB3C24507a6D503",
     "WETH": "0x2f0b23f53734252bda2277357e97e1517d6b042a",
 }
@@ -191,6 +191,10 @@ def stargate_router():
     address = "0x8731d54E9D02c286767d56ac03e8037C07e01e98"
     yield Contract(address)
 
+@pytest.fixture
+def router_owner():
+    owner = "0x65bb797c2B9830d891D87288F029ed8dACc19705"
+    yield Contract(owner)
 
 @pytest.fixture
 def trade_factory():
@@ -292,6 +296,9 @@ def strategy(
     ymechs_safe,
     wantIsWeth,
     emissionTokenIsSTG,
+    stargate_router,
+    router_owner,
+    token_whale
 ):
     strategy = strategist.deploy(
         Strategy,

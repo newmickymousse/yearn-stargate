@@ -4,26 +4,24 @@ from brownie import Contract
 
 
 token_addresses = {
-    "USDC": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",  # USDC
-    "WETH": "0x4200000000000000000000000000000000000006",  # WETH != 0xb69c8CBCD90A39D8D3d3ccf0a3E968511C3856A0
+    "USDC": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",       # USDC
+    "WETH": "0x4200000000000000000000000000000000000006",       # WETH != 0xb69c8CBCD90A39D8D3d3ccf0a3E968511C3856A0
 }
 
 token_id = {
-    "USDC": 0,  # USDC
-    "WETH": 1,  # WETH ! = 
+    "USDC": 0,
+    "WETH": 1,
 }
 
 token_prices = {
-    "WBTC": 35_000,
     "WETH": 2_000,
-    "USDT": 1,
     "USDC": 1,
-    "DAI": 1,
 }
 
 token_isWeth = {
-    "USDC": False,  # USDC
-    "WETH": True,  # WETH 
+    "USDC": False,
+    "WETH": True,
+
 }
 
 whale_addresses = {
@@ -32,15 +30,14 @@ whale_addresses = {
 }
 
 lp_whale_addresses = {
-    "USDC": "0x392AC17A9028515a3bFA6CCe51F8b70306C6bd43",
-    "WETH": "0x1D7C6783328C145393e84fb47a7f7C548f5Ee28d",
+    "USDC": "0x4DeA9e918c6289a52cd469cAC652727B7b412Cd2",
+    "WETH": "0x4DeA9e918c6289a52cd469cAC652727B7b412Cd2",
 }
 
-# TODO: uncomment those tokens you want to test as want
 @pytest.fixture(
     params=[
-        "USDC",  # USDC
-        "WETH",  # WETH
+        "USDC",
+        "WETH",
     ],
     scope="session",
     autouse=True,

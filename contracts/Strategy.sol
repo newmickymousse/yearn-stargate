@@ -9,7 +9,6 @@ import "../interfaces/IERC20Metadata.sol";
 import "../interfaces/IWETH.sol";
 import "../interfaces/ISGETH.sol";
 import "../interfaces/Stargate/IStargateRouter.sol";
-import "../interfaces/Stargate/IStargateRouterETH.sol";
 import "../interfaces/Stargate/IPool.sol";
 import "../interfaces/Stargate/ILPStaking.sol";
 import "./ySwaps/ITradeFactory.sol";
@@ -30,7 +29,6 @@ contract Strategy is BaseStrategy {
     IPool public liquidityPool;
     IERC20 public lpToken;
     IStargateRouter public stargateRouter;
-    IStargateRouterETH public stargateRouterETH;
     ILPStaking public lpStaker;
 
     string internal strategyName;
@@ -81,26 +79,21 @@ contract Strategy is BaseStrategy {
         liquidityPoolIDInLPStaking = _liquidityPoolIDInLPStaking;
         lpToken = lpStaker.poolInfo(_liquidityPoolIDInLPStaking).lpToken;
         liquidityPool = IPool(address(lpToken));
-        liquidityPoolID = liquidityPool.poolId();  
+        liquidityPoolID = liquidityPool.poolId();
         lpToken.safeApprove(address(lpStaker), max);
         require(liquidityPool.convertRate() > 0);
         wantIsWETH = _wantIsWETH;
+        stargateRouter = IStargateRouter(liquidityPool.router());
+
         if (wantIsWETH == false) {
             require(address(want) == liquidityPool.token());
-            stargateRouterETH = IStargateRouterETH(liquidityPool.router()); 
+            IERC20(want).safeApprove(address(stargateRouter), max);
         } else {
             require(liquidityPoolID == 13); // @note PoolID == 13 for ETH pool on mainnet, Optimism, Arbitrum
-            stargateRouter = IStargateRouter(liquidityPool.router());
-        }
-        unstakeLPOnMigration = true;
-
-        if (wantIsWETH) {
             address SGETH = IPool(address(lpToken)).token();
             IERC20(SGETH).safeApprove(address(stargateRouter), max);
-        } else {
-            IERC20(want).safeApprove(address(stargateRouter), max);
         }
-
+        unstakeLPOnMigration = true;
     }
 
     event Cloned(address indexed clone);
@@ -142,7 +135,7 @@ contract Strategy is BaseStrategy {
     }
 
     function name() external view override returns (string memory) {
-        return string(abi.encodePacked("Stargate-v3-", IERC20Metadata(address(want)).symbol())); // @note check if interface is working
+        return string(abi.encodePacked("StrategyStargateV3", IERC20Metadata(address(want)).symbol())); // @note check if interface is working
     }
 
     function estimatedTotalAssets() public view override returns (uint256) {
@@ -178,7 +171,7 @@ contract Strategy is BaseStrategy {
         uint256 _wantBalance = balanceOfWant();
 
         if (_amountNeeded > _wantBalance) {
-            _loss = _loss + withdrawSome(_amountNeeded);
+            uint256 _loss = _loss + withdrawSome(_amountNeeded);
         }
 
         uint256 _liquidWant = balanceOfWant();
@@ -274,11 +267,11 @@ contract Strategy is BaseStrategy {
             _emergencyUnstakeLP();
         }
         lpToken.safeTransfer(_newStrategy, balanceOfUnstakedLPToken());
-        _claimRewards()
+        _claimRewards();
         uint256 _balanceOfReward = balanceOfReward();
         if (_balanceOfReward > 0) {
             reward.safeTransfer(_newStrategy, _balanceOfReward);
-        }        
+        }
     }
 
     function harvestTrigger(uint256 callCostInWei) public view virtual override returns (bool) {
@@ -298,8 +291,7 @@ contract Strategy is BaseStrategy {
     function _ldToLp(uint256 _amountLD) internal returns (uint256) {
         uint256 _totalLiquidity = liquidityPool.totalLiquidity();
         require(_totalLiquidity > 0); // @note Stargate: cant convert SDtoLP when totalLiq == 0
-        return
-            (_amountLD * liquidityPool.totalSupply()) / (_totalLiquidity);
+        return (_amountLD * liquidityPool.totalSupply()) / (_totalLiquidity);
     }
 
     function _addToLP(uint256 _amount) internal {
@@ -308,15 +300,14 @@ contract Strategy is BaseStrategy {
             IWETH(address(want)).withdraw(_amount);
             address SGETH = IPool(address(lpToken)).token();
             ISGETH(SGETH).deposit{value: _amount}();
-            stargateRouterETH.addLiquidity(liquidityPoolID, _amount, address(this));
+            stargateRouter.addLiquidity(liquidityPoolID, _amount, address(this));
         } else {
             // @note want is not WETH:
             stargateRouter.addLiquidity(liquidityPoolID, _amount, address(this));
         }
     }
 
-    receive() external payable {
-    }
+    receive() external payable {}
 
     function _wrapETHtoWETH() internal {
         uint256 balanceOfETH = address(this).balance;
@@ -370,8 +361,9 @@ contract Strategy is BaseStrategy {
     }
 
     function sweepETH() public onlyGovernance {
-        (bool success, ) = governance().call{value: address(this).balance}(""); require(success, "!FailedETHSweep"); 
-        }
+        (bool success,) = governance().call{value: address(this).balance}("");
+        require(success, "!FailedETHSweep");
+    }
 
     function balanceOfWant() public view returns (uint256) {
         return want.balanceOf(address(this));
@@ -394,7 +386,7 @@ contract Strategy is BaseStrategy {
         return lpStaker.userInfo(liquidityPoolIDInLPStaking, address(this)).amount;
     }
 
-    function balanceOfReward() external view returns (uint256) {
+    function balanceOfReward() public view returns (uint256) {
         return reward.balanceOf(address(this));
     }
 
@@ -415,17 +407,11 @@ contract Strategy is BaseStrategy {
 
     // @note Redeem LP position, non-atomic, s*token will be burned and corresponding native token will be sent when available
     // @note Can take up to 30 min - block confs of source chain + block confs of B chain
-    function redeemLocal(uint16 _dstChainId, uint256 _dstPoolId, uint256 _lpAmount) payable external onlyGovernance {
+    function redeemLocal(uint16 _dstChainId, uint256 _lpAmount) external payable onlyGovernance {
         bytes memory _address = abi.encodePacked(address(this));
         IStargateRouter.lzTxObj memory _lzTxParams = IStargateRouter.lzTxObj(0, 0, "0x");
-        stargateRouter.redeemLocal{value:msg.value}(
-            _dstChainId, 
-            liquidityPoolID,
-            _dstPoolId,
-            payable(address(this)),
-            _lpAmount,
-            _address,
-            _lzTxParams
+        stargateRouter.redeemLocal{value: msg.value}(
+            _dstChainId, liquidityPoolID, liquidityPoolID, payable(address(this)), _lpAmount, _address, _lzTxParams
         );
     }
 
@@ -436,6 +422,7 @@ contract Strategy is BaseStrategy {
             _removeTradeFactoryPermissions();
         }
 
+        // @note approve and set up trade factory
         reward.safeApprove(_tradeFactory, max);
         ITradeFactory tf = ITradeFactory(_tradeFactory);
         tf.enable(address(reward), address(want));
