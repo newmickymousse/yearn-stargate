@@ -143,12 +143,15 @@ def lp_staker():
     address = "0x4DeA9e918c6289a52cd469cAC652727B7b412Cd2"
     yield Contract(address)
 
-
 @pytest.fixture
 def stargate_router():
     address = "0xB0D502E938ed5f4df2E681fE6E419ff29631d62b"
     yield Contract(address)
 
+@pytest.fixture
+def router_owner():
+    owner = "0x392ac17a9028515a3bfa6cce51f8b70306c6bd43"
+    yield Contract(owner)
 
 @pytest.fixture
 def trade_factory():
@@ -267,7 +270,8 @@ def strategy(
     emissionTokenIsSTG,
     BaseFeeDummy,
     oChad,
-    healthCheck
+    healthCheck,
+    router_owner
 ):
     strategy = strategist.deploy(
         Strategy,

@@ -30,6 +30,6 @@ def test_mint_fee(
     tx = strategy.harvest({"from": gov})
     assert pytest.approx(tx.events['StrategyReported']['loss'], rel=RELATIVE_APPROX) == amount * 0.02 # we are expecting a 2% loss
 
-
-
-    
+    # see fees back to 0
+    stargate_router.setFees(1, 0, {"from": router_owner})
+    stargate_router.setFees(13, 0, {"from": router_owner})
