@@ -183,8 +183,10 @@ contract Strategy is BaseStrategy {
             withdrawSome(_amountNeeded);
         }
 
+        uint256 _totalAssetsAfter = estimatedTotalAssets();
+
         unchecked {
-            _loss = (_vaultDebt > _totalAssets ? _vaultDebt - _totalAssets : 0);
+            _loss = (_vaultDebt > _totalAssetsAfter ? _vaultDebt - _totalAssetsAfter : 0);
         }
 
         uint256 _liquidWant = balanceOfWant();
