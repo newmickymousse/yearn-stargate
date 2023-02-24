@@ -11,19 +11,8 @@ import "../interfaces/ISGETH.sol";
 import "../interfaces/Stargate/IStargateRouter.sol";
 import "../interfaces/Stargate/IPool.sol";
 import "../interfaces/Stargate/ILPStaking.sol";
+import "../interfaces/Velodrome/IVelodromeRouter.sol";
 import "./ySwaps/ITradeFactory.sol";
-
-interface IVelodromeRouter {
-    function swapExactTokensForTokensSimple(
-        uint amountIn,
-        uint amountOutMin,
-        address tokenFrom,
-        address tokenTo,
-        bool stable,
-        address to,
-        uint deadline
-    ) external returns (uint[] memory amounts);
-}
 
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -36,6 +25,7 @@ contract Strategy is BaseStrategy {
 
     uint256 public liquidityPoolID; // @note Main Pool ID
     uint256 public liquidityPoolIDInLPStaking; // @note Pool ID for LPStaking
+    uint256 public maxSlippageSellingRewards;
 
     IERC20 public reward;
     IPool public liquidityPool;
@@ -86,9 +76,11 @@ contract Strategy is BaseStrategy {
         emissionTokenIsSTG = _emissionTokenIsSTG;
         if (emissionTokenIsSTG) {
             reward = IERC20(lpStaker.stargate());
-        } else { // @note on Optimism rewards are OP only
+        } else {
+            // @note on Optimism rewards are OP only
             reward = IERC20(lpStaker.eToken());
             IERC20(reward).safeApprove(address(velodromeRouter), max);
+            maxSlippageSellingRewards = 30;
         }
 
         liquidityPoolIDInLPStaking = _liquidityPoolIDInLPStaking;
@@ -171,7 +163,7 @@ contract Strategy is BaseStrategy {
         returns (uint256 _profit, uint256 _loss, uint256 _debtPayment)
     {
         _claimRewards();
-        if (emissionTokenIsSTG == false){
+        if (emissionTokenIsSTG == false) {
             _sell(balanceOfReward());
         }
 
@@ -181,7 +173,6 @@ contract Strategy is BaseStrategy {
 
         unchecked {
             _profit = _totalAssets > _vaultDebt ? _totalAssets - _vaultDebt : 0;
-            _loss = (_vaultDebt > _totalAssets ? _vaultDebt - _totalAssets : 0);
         }
 
         // @note Free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
@@ -189,7 +180,11 @@ contract Strategy is BaseStrategy {
         uint256 _wantBalance = balanceOfWant();
 
         if (_amountNeeded > _wantBalance) {
-            _loss = _loss + withdrawSome(_amountNeeded);
+            withdrawSome(_amountNeeded);
+        }
+
+        unchecked {
+            _loss = (_vaultDebt > _totalAssets ? _vaultDebt - _totalAssets : 0);
         }
 
         uint256 _liquidWant = balanceOfWant();
@@ -423,6 +418,10 @@ contract Strategy is BaseStrategy {
         unstakeLPOnMigration = _unstakeLPOnMigration;
     }
 
+    function setMaxSlippageSellingRewards(uint256 _maxSlippageSellingRewards) external onlyVaultManagers {
+        maxSlippageSellingRewards = _maxSlippageSellingRewards;
+    }
+
     // @note Redeem LP position, non-atomic, s*token will be burned and corresponding native token will be sent when available
     // @note Can take up to 30 min - block confs of source chain + block confs of B chain
     function redeemLocal(uint16 _dstChainId, uint256 _lpAmount) external payable onlyGovernance {
@@ -458,11 +457,17 @@ contract Strategy is BaseStrategy {
 
     // ----------------- DEX LOGIC FOR OPTIMISM ---------------------
 
-    function _sell(uint256 _rewardTokenAmount) internal {      
+    function _sell(uint256 _rewardTokenAmount) internal {
         if (_rewardTokenAmount > 1e17) {
+            (uint256 _expectedOut,) = IVelodromeRouter(velodromeRouter).getAmountOut(
+                _rewardTokenAmount, // amountIn
+                address(reward), // tokenIn
+                address(want) // tokenOut
+            );
+            uint256 _amountOutMin = _expectedOut * (10_000 - maxSlippageSellingRewards) / 10_000;
             IVelodromeRouter(velodromeRouter).swapExactTokensForTokensSimple(
                 _rewardTokenAmount, // amountIn
-                0, // amountOutMin
+                _amountOutMin, // amountOutMin
                 address(reward), // tokenFrom
                 address(want), // tokenTo
                 false, // stable
@@ -471,5 +476,4 @@ contract Strategy is BaseStrategy {
             );
         }
     }
-
 }
