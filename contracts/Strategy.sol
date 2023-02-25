@@ -417,6 +417,7 @@ contract Strategy is BaseStrategy {
 
     function setMaxSlippageSellingRewards(uint256 _maxSlippageSellingRewards) external onlyVaultManagers {
         maxSlippageSellingRewards = _maxSlippageSellingRewards;
+        require(_maxSlippageSellingRewards <= 10_000, "SLIPPAGE_LIMIT_EXCEEDED");
     }
 
     // @note Redeem LP position, non-atomic, s*token will be burned and corresponding native token will be sent when available
