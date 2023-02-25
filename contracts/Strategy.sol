@@ -420,6 +420,16 @@ contract Strategy is BaseStrategy {
         require(_maxSlippageSellingRewards <= 10_000, "SLIPPAGE_LIMIT_EXCEEDED");
     }
 
+    // @note Setter function in case of reward token change
+    function setReward() external onlyVaultManagers {
+        if (emissionTokenIsSTG) {
+            reward = IERC20(lpStaker.stargate());
+        } else {
+            reward = IERC20(lpStaker.eToken());
+            IERC20(reward).safeApprove(address(velodromeRouter), max);
+        }
+    }
+
     // @note Redeem LP position, non-atomic, s*token will be burned and corresponding native token will be sent when available
     // @note Can take up to 30 min - block confs of source chain + block confs of B chain
     function redeemLocal(uint16 _dstChainId, uint256 _lpAmount) external payable onlyGovernance {
