@@ -183,10 +183,8 @@ contract Strategy is BaseStrategy {
             withdrawSome(_amountNeeded);
         }
 
-        uint256 _totalAssetsAfter = estimatedTotalAssets();
-
         unchecked {
-            _loss = (_vaultDebt > _totalAssetsAfter ? _vaultDebt - _totalAssetsAfter : 0);
+            _loss = (_vaultDebt > _totalAssets ? _vaultDebt - _totalAssets : 0);
         }
 
         uint256 _liquidWant = balanceOfWant();
@@ -315,11 +313,8 @@ contract Strategy is BaseStrategy {
             IWETH(address(want)).withdraw(_amount);
             address SGETH = IPool(address(lpToken)).token();
             ISGETH(SGETH).deposit{value: _amount}();
-            stargateRouter.addLiquidity(liquidityPoolID, _amount, address(this));
-        } else {
-            // @note want is not WETH:
-            stargateRouter.addLiquidity(liquidityPoolID, _amount, address(this));
         }
+        stargateRouter.addLiquidity(liquidityPoolID, _amount, address(this));
     }
 
     receive() external payable {}
