@@ -35,7 +35,7 @@ contract Strategy is BaseStrategy {
 
     string internal strategyName;
     bool private wantIsWETH;
-    bool private emissionTokenIsSTG;
+    bool private networkIsOptimism;
     bool internal unstakeLPOnMigration;
 
     address internal constant velodromeRouter = 0xa132DAB612dB5cB9fC9Ac426A0Cc215A3423F9c9;
@@ -45,9 +45,9 @@ contract Strategy is BaseStrategy {
         address _lpStaker,
         uint16 _liquidityPoolIDInLPStaking,
         bool _wantIsWETH,
-        bool _emissionTokenIsSTG
+        bool _networkIsOptimism
     ) public BaseStrategy(_vault) {
-        _initializeStrategy(_lpStaker, _liquidityPoolIDInLPStaking, _wantIsWETH, _emissionTokenIsSTG);
+        _initializeStrategy(_lpStaker, _liquidityPoolIDInLPStaking, _wantIsWETH, _networkIsOptimism);
     }
 
     function initialize(
@@ -58,27 +58,24 @@ contract Strategy is BaseStrategy {
         address _lpStaker,
         uint16 _liquidityPoolIDInLPStaking,
         bool _wantIsWETH,
-        bool _emissionTokenIsSTG
+        bool _networkIsOptimism
     ) public {
         require(address(lpStaker) == address(0)); // @note Only initialize once
 
         _initialize(_vault, _strategist, _rewards, _keeper);
-        _initializeStrategy(_lpStaker, _liquidityPoolIDInLPStaking, _wantIsWETH, _emissionTokenIsSTG);
+        _initializeStrategy(_lpStaker, _liquidityPoolIDInLPStaking, _wantIsWETH, _networkIsOptimism);
     }
 
     function _initializeStrategy(
         address _lpStaker,
         uint16 _liquidityPoolIDInLPStaking,
         bool _wantIsWETH,
-        bool _emissionTokenIsSTG
+        bool _networkIsOptimism
     ) internal {
         lpStaker = ILPStaking(_lpStaker);
-        emissionTokenIsSTG = _emissionTokenIsSTG;
-        if (emissionTokenIsSTG) {
-            reward = IERC20(lpStaker.stargate());
-        } else {
-            // @note on Optimism rewards are OP only
-            reward = IERC20(lpStaker.eToken());
+        networkIsOptimism = _networkIsOptimism;
+        reward = IERC20(lpStaker.eToken());
+        if (networkIsOptimism) {
             IERC20(reward).safeApprove(address(velodromeRouter), max);
             maxSlippageSellingRewards = 30;
         }
@@ -113,7 +110,7 @@ contract Strategy is BaseStrategy {
         address _lpStaker,
         uint16 _liquidityPoolIDInLPStaking,
         bool _wantIsWETH,
-        bool _emissionTokenIsSTG
+        bool _networkIsOptimism
     ) external returns (address payable newStrategy) {
         require(isOriginal);
 
@@ -135,7 +132,7 @@ contract Strategy is BaseStrategy {
             _lpStaker,
             _liquidityPoolIDInLPStaking,
             _wantIsWETH,
-            _emissionTokenIsSTG
+            _networkIsOptimism
         );
 
         emit Cloned(newStrategy);
@@ -150,11 +147,7 @@ contract Strategy is BaseStrategy {
     }
 
     function pendingRewards() public view returns (uint256) {
-        if (emissionTokenIsSTG) {
-            return lpStaker.pendingStargate(liquidityPoolIDInLPStaking, address(this));
-        } else {
-            return lpStaker.pendingEmissionToken(liquidityPoolIDInLPStaking, address(this));
-        }
+        return lpStaker.pendingEmissionToken(liquidityPoolIDInLPStaking, address(this));
     }
 
     function prepareReturn(uint256 _debtOutstanding)
@@ -163,7 +156,7 @@ contract Strategy is BaseStrategy {
         returns (uint256 _profit, uint256 _loss, uint256 _debtPayment)
     {
         _claimRewards();
-        if (emissionTokenIsSTG == false) {
+        if (networkIsOptimism == false) {
             _sell(balanceOfReward());
         }
 
@@ -418,16 +411,6 @@ contract Strategy is BaseStrategy {
     function setMaxSlippageSellingRewards(uint256 _maxSlippageSellingRewards) external onlyVaultManagers {
         maxSlippageSellingRewards = _maxSlippageSellingRewards;
         require(_maxSlippageSellingRewards <= 10_000, "SLIPPAGE_LIMIT_EXCEEDED");
-    }
-
-    // @note Setter function in case of reward token change
-    function setReward() external onlyVaultManagers {
-        if (emissionTokenIsSTG) {
-            reward = IERC20(lpStaker.stargate());
-        } else {
-            reward = IERC20(lpStaker.eToken());
-            IERC20(reward).safeApprove(address(velodromeRouter), max);
-        }
     }
 
     // @note Redeem LP position, non-atomic, s*token will be burned and corresponding native token will be sent when available

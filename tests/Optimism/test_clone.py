@@ -15,7 +15,7 @@ def test_double_init_should_revert(
     price_feed,
     rewards,
     wantIsWeth,
-    emissionTokenIsSTG,
+    networkIsOptimism,
 ):
     clone_tx = strategy.clone(
         vault,
@@ -25,7 +25,7 @@ def test_double_init_should_revert(
         lp_staker,
         liquidity_pool_id_in_lp_staking,
         wantIsWeth,
-        emissionTokenIsSTG,
+        networkIsOptimism,
         {"from": strategist},
     )
 
@@ -42,7 +42,7 @@ def test_double_init_should_revert(
             lp_staker,
             liquidity_pool_id_in_lp_staking,
             wantIsWeth,
-            emissionTokenIsSTG,
+            networkIsOptimism,
             {"from": gov},
         )
 
@@ -55,7 +55,7 @@ def test_double_init_should_revert(
             lp_staker,
             liquidity_pool_id_in_lp_staking,
             wantIsWeth,
-            emissionTokenIsSTG,
+            networkIsOptimism,
             {"from": gov},
         )
 
@@ -74,7 +74,7 @@ def test_clone(
     price_feed,
     amount,
     wantIsWeth,
-    emissionTokenIsSTG,
+    networkIsOptimism,
     healthCheck
 ):
     clone_tx = strategy.clone(
@@ -85,7 +85,7 @@ def test_clone(
         lp_staker,
         liquidity_pool_id_in_lp_staking,
         wantIsWeth,
-        emissionTokenIsSTG,
+        networkIsOptimism,
         {"from": strategist},
     )
 

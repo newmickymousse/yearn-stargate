@@ -47,8 +47,8 @@ def token(request):
 
 #Optimism has OP rewards, not STG rewards:
 @pytest.fixture
-def emissionTokenIsSTG():
-    yield False
+def networkIsOptimism():
+    yield True
 
 @pytest.fixture
 def token_lp(token, lp_staker):
@@ -267,7 +267,7 @@ def strategy(
     trade_factory,
     #price_feed,
     wantIsWeth,
-    emissionTokenIsSTG,
+    networkIsOptimism,
     BaseFeeDummy,
     oChad,
     healthCheck,
@@ -279,7 +279,7 @@ def strategy(
         lp_staker,
         liquidity_pool_id_in_lp_staking,
         wantIsWeth,
-        emissionTokenIsSTG
+        networkIsOptimism
     )
     strategy.setKeeper(keeper, {"from": gov})
     strategy.setHealthCheck(healthCheck, {"from": gov})
