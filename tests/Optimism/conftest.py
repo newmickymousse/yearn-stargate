@@ -45,11 +45,6 @@ lp_whale_addresses = {
 def token(request):
     yield Contract(token_addresses[request.param])
 
-#Optimism has OP rewards, not STG rewards:
-@pytest.fixture
-def networkIsOptimism():
-    yield True
-
 @pytest.fixture
 def token_lp(token, lp_staker):
     yield Contract(lp_staker.poolInfo(token_id[token.symbol()])["lpToken"])
@@ -267,7 +262,6 @@ def strategy(
     trade_factory,
     #price_feed,
     wantIsWeth,
-    networkIsOptimism,
     BaseFeeDummy,
     oChad,
     healthCheck,
@@ -278,8 +272,7 @@ def strategy(
         vault,
         lp_staker,
         liquidity_pool_id_in_lp_staking,
-        wantIsWeth,
-        networkIsOptimism
+        wantIsWeth
     )
     strategy.setKeeper(keeper, {"from": gov})
     strategy.setHealthCheck(healthCheck, {"from": gov})

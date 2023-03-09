@@ -20,7 +20,6 @@ def test_migration(
     price_feed,
     liquidity_pool_id_in_lp_staking,
     wantIsWeth,
-    emissionTokenIsSTG,
 ):
     # Deposit to the vault and harvest
     token.approve(vault.address, amount, {"from": user})
@@ -35,8 +34,7 @@ def test_migration(
         vault,
         lp_staker,
         liquidity_pool_id_in_lp_staking,
-        wantIsWeth,
-        emissionTokenIsSTG
+        wantIsWeth
     )
     previous_debt = vault.strategies(strategy).dict()["totalDebt"]
     vault.migrateStrategy(strategy, new_strategy, {"from": gov})

@@ -170,7 +170,7 @@ def usdt():
 
 @pytest.fixture
 def stg_token():
-    token_address = "0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6"
+    token_address = "0x326f5834d73a2dc02b3c492E9ef1b24399d430b3"
     yield Contract(token_address)
 
 
@@ -182,7 +182,7 @@ def stg_whale(accounts):
 
 @pytest.fixture
 def lp_staker():
-    address = "0xB0D502E938ed5f4df2E681fE6E419ff29631d62b"
+    address = "0xc659Cc0d7b832C3bb1c6CDA0535Dd54D7A660f4d"
     yield Contract(address)
 
 
@@ -295,7 +295,6 @@ def strategy(
     trade_factory,
     ymechs_safe,
     wantIsWeth,
-    emissionTokenIsSTG,
     stargate_router,
     router_owner,
     token_whale
@@ -305,8 +304,7 @@ def strategy(
         vault,
         lp_staker,
         liquidity_pool_id_in_lp_staking,
-        wantIsWeth,
-        emissionTokenIsSTG
+        wantIsWeth
     )
     strategy.setKeeper(keeper, {"from": gov})
     strategy.setDoHealthCheck(False, {"from": gov})

@@ -33,21 +33,25 @@ contract Strategy is BaseStrategy {
     IStargateRouter public stargateRouter;
     ILPStaking public lpStaker;
 
+    address private constant WETH = address(0x4200000000000000000000000000000000000006);
+    address private constant USDC = address(0x7F5c764cBc14f9669B88837ca1490cCa17c31607);
+    address private constant DAI = address(0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1);
+
     string internal strategyName;
     bool private wantIsWETH;
     bool private networkIsOptimism;
     bool internal unstakeLPOnMigration;
 
-    address internal constant velodromeRouter = 0xa132DAB612dB5cB9fC9Ac426A0Cc215A3423F9c9;
+    address internal constant VELODROME_ROUTER = 0xa132DAB612dB5cB9fC9Ac426A0Cc215A3423F9c9;
+    IVelodromeRouter.Route[] public sellRewardsRoute;
 
     constructor(
         address _vault,
         address _lpStaker,
         uint16 _liquidityPoolIDInLPStaking,
-        bool _wantIsWETH,
-        bool _networkIsOptimism
+        bool _wantIsWETH
     ) public BaseStrategy(_vault) {
-        _initializeStrategy(_lpStaker, _liquidityPoolIDInLPStaking, _wantIsWETH, _networkIsOptimism);
+        _initializeStrategy(_lpStaker, _liquidityPoolIDInLPStaking, _wantIsWETH);
     }
 
     function initialize(
@@ -57,27 +61,26 @@ contract Strategy is BaseStrategy {
         address _keeper,
         address _lpStaker,
         uint16 _liquidityPoolIDInLPStaking,
-        bool _wantIsWETH,
-        bool _networkIsOptimism
+        bool _wantIsWETH
     ) public {
         require(address(lpStaker) == address(0)); // @note Only initialize once
 
         _initialize(_vault, _strategist, _rewards, _keeper);
-        _initializeStrategy(_lpStaker, _liquidityPoolIDInLPStaking, _wantIsWETH, _networkIsOptimism);
+        _initializeStrategy(_lpStaker, _liquidityPoolIDInLPStaking, _wantIsWETH);
     }
 
     function _initializeStrategy(
         address _lpStaker,
         uint16 _liquidityPoolIDInLPStaking,
-        bool _wantIsWETH,
-        bool _networkIsOptimism
+        bool _wantIsWETH
     ) internal {
         lpStaker = ILPStaking(_lpStaker);
-        networkIsOptimism = _networkIsOptimism;
+        networkIsOptimism = block.chainid == 10 ? true : false;
         reward = IERC20(lpStaker.eToken());
         if (networkIsOptimism) {
-            IERC20(reward).safeApprove(address(velodromeRouter), max);
+            IERC20(reward).safeApprove(address(VELODROME_ROUTER), max);
             maxSlippageSellingRewards = 30;
+            getTokenOutPathVelo(address(want), address(reward));
         }
 
         liquidityPoolIDInLPStaking = _liquidityPoolIDInLPStaking;
@@ -85,6 +88,7 @@ contract Strategy is BaseStrategy {
         liquidityPool = IPool(address(lpToken));
         liquidityPoolID = liquidityPool.poolId();
         lpToken.safeApprove(address(lpStaker), max);
+        require(address(lpStaker) != address(0) && address(lpToken) != address(0), "Invalid address");
         require(liquidityPool.convertRate() > 0);
         wantIsWETH = _wantIsWETH;
         stargateRouter = IStargateRouter(liquidityPool.router());
@@ -109,8 +113,7 @@ contract Strategy is BaseStrategy {
         address _keeper,
         address _lpStaker,
         uint16 _liquidityPoolIDInLPStaking,
-        bool _wantIsWETH,
-        bool _networkIsOptimism
+        bool _wantIsWETH
     ) external returns (address payable newStrategy) {
         require(isOriginal);
 
@@ -131,8 +134,7 @@ contract Strategy is BaseStrategy {
             _keeper,
             _lpStaker,
             _liquidityPoolIDInLPStaking,
-            _wantIsWETH,
-            _networkIsOptimism
+            _wantIsWETH
         );
 
         emit Cloned(newStrategy);
@@ -448,20 +450,59 @@ contract Strategy is BaseStrategy {
 
     // ----------------- DEX LOGIC FOR OPTIMISM ---------------------
 
+    function setSellRewardsRoute(IVelodromeRouter.Route[] memory _routes) external onlyVaultManagers {
+        delete sellRewardsRoute; // clear the array
+        for (uint256 i = 0; i < _routes.length; i++) {
+            sellRewardsRoute.push(_routes[i]);
+        }
+    }
+
+    function getTokenOutPathVelo(address _tokenIn, address _tokenOut)
+        internal
+    {
+        address _weth = address(WETH);
+        address _usdc = address(USDC);
+        address _dai = address(DAI);
+        bool isWeth = _tokenOut == _weth;
+        bool isUsdc = _tokenOut == _usdc;
+        bool isDai = _tokenOut == _dai;
+
+        IVelodromeRouter.Route[] memory _routes;
+
+        if (isUsdc){
+            _routes = new IVelodromeRouter.Route[](1);
+            _routes[0] = IVelodromeRouter.Route(_tokenIn, _tokenOut, false);
+        }
+
+        if (isWeth){
+            _routes = new IVelodromeRouter.Route[](2);
+            _routes[0] = IVelodromeRouter.Route(_tokenIn, _usdc, false);
+            _routes[1] = IVelodromeRouter.Route(_usdc, _tokenOut, false);
+        }
+
+        if (isDai){
+            _routes = new IVelodromeRouter.Route[](2);
+            _routes[0] = IVelodromeRouter.Route(_tokenIn, _usdc, false);
+            _routes[1] = IVelodromeRouter.Route(_usdc, _tokenOut, true);
+        }
+
+        for (uint i = 0; i < _routes.length; i++) {
+            sellRewardsRoute.push(_routes[i]);
+        }
+    }
+
     function _sell(uint256 _rewardTokenAmount) internal {
         if (_rewardTokenAmount > 1e17) {
-            (uint256 _expectedOut,) = IVelodromeRouter(velodromeRouter).getAmountOut(
+            (uint256 _expectedOut,) = IVelodromeRouter(VELODROME_ROUTER).getAmountOut(
                 _rewardTokenAmount, // amountIn
                 address(reward), // tokenIn
                 address(want) // tokenOut
             );
             uint256 _amountOutMin = _expectedOut * (10_000 - maxSlippageSellingRewards) / 10_000;
-            IVelodromeRouter(velodromeRouter).swapExactTokensForTokensSimple(
+            IVelodromeRouter(VELODROME_ROUTER).swapExactTokensForTokens(
                 _rewardTokenAmount, // amountIn
                 _amountOutMin, // amountOutMin
-                address(reward), // tokenFrom
-                address(want), // tokenTo
-                false, // stable
+                sellRewardsRoute,
                 address(this), // to
                 block.timestamp // deadline
             );
