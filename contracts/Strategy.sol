@@ -76,11 +76,13 @@ contract Strategy is BaseStrategy {
     ) internal {
         lpStaker = ILPStaking(_lpStaker);
         networkIsOptimism = block.chainid == 10 ? true : false;
-        reward = IERC20(lpStaker.eToken());
         if (networkIsOptimism) {
+            reward = IERC20(lpStaker.eToken());
             IERC20(reward).safeApprove(address(VELODROME_ROUTER), max);
             maxSlippageSellingRewards = 30;
             getTokenOutPathVelo(address(want), address(reward));
+        } else {
+            reward = IERC20(lpStaker.stargate());
         }
 
         liquidityPoolIDInLPStaking = _liquidityPoolIDInLPStaking;
@@ -149,7 +151,11 @@ contract Strategy is BaseStrategy {
     }
 
     function pendingRewards() public view returns (uint256) {
-        return lpStaker.pendingEmissionToken(liquidityPoolIDInLPStaking, address(this));
+        if (networkIsOptimism) {
+            return lpStaker.pendingEmissionToken(liquidityPoolIDInLPStaking, address(this));
+        } else {
+            return lpStaker.pendingStargate(liquidityPoolIDInLPStaking, address(this));
+        }
     }
 
     function prepareReturn(uint256 _debtOutstanding)
@@ -158,7 +164,7 @@ contract Strategy is BaseStrategy {
         returns (uint256 _profit, uint256 _loss, uint256 _debtPayment)
     {
         _claimRewards();
-        if (networkIsOptimism == false) {
+        if (networkIsOptimism) {
             _sell(balanceOfReward());
         }
 
