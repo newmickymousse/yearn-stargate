@@ -499,15 +499,9 @@ contract Strategy is BaseStrategy {
 
     function _sell(uint256 _rewardTokenAmount) internal {
         if (_rewardTokenAmount > 1e17) {
-            (uint256 _expectedOut,) = IVelodromeRouter(VELODROME_ROUTER).getAmountOut(
-                _rewardTokenAmount, // amountIn
-                address(reward), // tokenIn
-                address(want) // tokenOut
-            );
-            uint256 _amountOutMin = _expectedOut * (10_000 - maxSlippageSellingRewards) / 10_000;
             IVelodromeRouter(VELODROME_ROUTER).swapExactTokensForTokens(
                 _rewardTokenAmount, // amountIn
-                _amountOutMin, // amountOutMin
+                0, // amountOutMin
                 sellRewardsRoute,
                 address(this), // to
                 block.timestamp // deadline
