@@ -28,7 +28,6 @@ def test_profitable_harvest_curve(
     trade_factory,
     gov,
     wantIsWeth,
-    emissionTokenIsSTG,
 ):
     # Deposit to the vault
     token.approve(vault.address, amount, {"from": user})

@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-
 pragma solidity 0.8.15;
-pragma experimental ABIEncoderV2;
 
 interface IStargateRouter {
     struct lzTxObj {
@@ -14,35 +12,11 @@ interface IStargateRouter {
         uint256 _poolId,
         uint256 _amountLD,
         address _to
-    ) external;
+        ) external;
 
-    function swap(
-        uint16 _dstChainId,
-        uint256 _srcPoolId,
-        uint256 _dstPoolId,
-        address payable _refundAddress,
-        uint256 _amountLD,
-        uint256 _minAmountLD,
-        lzTxObj memory _lzTxParams,
-        bytes calldata _to,
-        bytes calldata _payload
-    ) external payable;
-
-    function redeemRemote(
-        uint16 _dstChainId,
-        uint256 _srcPoolId,
-        uint256 _dstPoolId,
-        address payable _refundAddress,
-        uint256 _amountLP,
-        uint256 _minAmountLD,
-        bytes calldata _to,
-        lzTxObj memory _lzTxParams
-    ) external payable;
-
-    function instantRedeemLocal(
-        uint16 _srcPoolId,
-        uint256 _amountLP,
-        address _to
+    function instantRedeemLocal(uint16 _srcPoolId,
+    uint256 _amountLP,
+    address _to
     ) external returns (uint256);
 
     function redeemLocal(
@@ -53,14 +27,7 @@ interface IStargateRouter {
         uint256 _amountLP,
         bytes calldata _to,
         lzTxObj memory _lzTxParams
-    ) external payable;
-
-    function sendCredits(
-        uint16 _dstChainId,
-        uint256 _srcPoolId,
-        uint256 _dstPoolId,
-        address payable _refundAddress
-    ) external payable;
+        ) external payable;
 
     function quoteLayerZeroFee(
         uint16 _dstChainId,
@@ -68,5 +35,6 @@ interface IStargateRouter {
         bytes calldata _toAddress,
         bytes calldata _transferAndCallPayload,
         lzTxObj memory _lzTxParams
-    ) external view returns (uint256, uint256);
+    ) external returns (uint256, uint256);
+
 }

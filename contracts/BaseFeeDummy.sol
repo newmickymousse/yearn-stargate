@@ -8,7 +8,6 @@ interface IBaseFee {
 }
 
 contract BaseFeeDummy {
-
     address public baseFeeOracle;
     address public governance;
     bool public manualBaseFeeBool;
@@ -19,10 +18,10 @@ contract BaseFeeDummy {
     }
 
     function isCurrentBaseFeeAcceptable() external view returns (bool) {
-        if (baseFeeOracle == address(0)){
+        if (baseFeeOracle == address(0)) {
             return manualBaseFeeBool;
         } else {
-            return IBaseFee(baseFeeOracle).isCurrentBaseFeeAcceptable();          
+            return IBaseFee(baseFeeOracle).isCurrentBaseFeeAcceptable();
         }
     }
 
@@ -40,5 +39,4 @@ contract BaseFeeDummy {
         require(msg.sender == governance, "!gov");
         governance = _newGovernance;
     }
-    
 }

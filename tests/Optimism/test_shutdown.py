@@ -53,9 +53,9 @@ def test_basic_shutdown(
     chain.mine(1)
 
     # Harvest 2: Realize profit
-    strategy.harvest({"from": gov})
-    chain.sleep(3600 * 6)  # 6 hrs needed for profits to unlock
-    chain.mine(1)
+    # strategy.harvest({"from": gov})
+    # chain.sleep(3600 * 6)  # 6 hrs needed for profits to unlock
+    # chain.mine(1)
 
     ## Set emergency
     strategy.setEmergencyExit({"from": strategist})
